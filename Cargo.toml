@@ -1,0 +1,9 @@
+[package]
+name = "llama-discord-bot-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serenity = { version = "0.12.4", default-features = false, features = ["gateway", "client", "model", "rustls_backend"] }
+tokio = { version = "1", features = ["full"] }
+llama-cpp-2 = { version = "0.1.89", features = ["cuda"] }

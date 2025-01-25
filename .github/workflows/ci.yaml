@@ -1,0 +1,20 @@
+name: Rust Checks
+
+on: [push, pull_request]
+
+jobs:
+  cargofmt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: fmt
+        run: cargo fmt -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: clippy
+        run: cargo clippy -- -D warnings --verbose
