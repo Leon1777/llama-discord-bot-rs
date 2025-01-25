@@ -1,4 +1,4 @@
-### Rust + [Llama.cpp.rs](https://docs.rs/llama-cpp-2/latest/llama_cpp_2/) + [Serenity](https://docs.rs/serenity/latest/serenity/) (WIP)
+## Rust + [Llama.cpp.rs](https://docs.rs/llama-cpp-2/latest/llama_cpp_2/) + [Serenity](https://docs.rs/serenity/latest/serenity/) (WIP)
 
 ### Run the Bot
 
@@ -8,7 +8,7 @@
 2. **Clone and Build**
 
    ```bash
-   git clone https://github.com/your-repo-name.git
+   git clone https://github.com/Leon1777/llama-discord-bot-rs.git
    cd your-repo-name
    cargo build --release
    ```
@@ -41,7 +41,7 @@
 
 ### Models Tested
 
-- [Mistral-Nemo-Instruct-2407](https://huggingface.co/bartowski/Mistral-Nemo-Instruct-2407-GGUF/blob/main/Mistral-Nemo-Instruct-2407-Q6_K_L.gguf)
+- [Mistral-Nemo-Instruct-2407](https://huggingface.co/bartowski/Mistral-Nemo-Instruct-2407-GGUF)
 - [Meta-Llama 3.1-8B-Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF)
 
 ---
