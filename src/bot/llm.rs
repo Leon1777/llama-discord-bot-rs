@@ -64,7 +64,7 @@ pub async fn generate_response(
         .str_to_token(&prompt, AddBos::Always)
         .map_err(|e| format!("Failed to tokenize prompt: {}", e))?;
 
-    println!("Tokens for prompt: {:?}", tokens_list);
+    // println!("Tokens for prompt: {:?}", tokens_list);
 
     let n_ctx = ctx.n_ctx() as i32;
     let n_kv_req = tokens_list.len() as i32 + (n_len - tokens_list.len() as i32);
@@ -156,7 +156,7 @@ pub async fn generate_response(
             content: generated_response.clone(),
         });
 
-        println!("Chat History: {:?}", history);
+        // println!("Chat History: {:?}", history);
     }
 
     Ok(generated_response)
