@@ -64,6 +64,8 @@ pub async fn generate_response(
         .str_to_token(&prompt, AddBos::Always)
         .map_err(|e| format!("Failed to tokenize prompt: {}", e))?;
 
+    println!("Tokens for prompt: {:?}", tokens_list);
+
     let n_ctx = ctx.n_ctx() as i32;
     let n_kv_req = tokens_list.len() as i32 + (n_len - tokens_list.len() as i32);
 
@@ -116,10 +118,11 @@ pub async fn generate_response(
         }
 
         // token to string
-        let token_str = model
-            .token_to_str(token, Special::Tokenize)
-            .map_err(|e| format!("Failed to convert token to string: {}", e))?;
-        generated_response += &token_str;
+        if let Ok(token_str) = model.token_to_str(token, Special::Tokenize) {
+            generated_response += &token_str;
+        } else {
+            eprintln!("Skipping invalid token: {}", token);
+        }
 
         // Prepare for next token
         batch.clear();
