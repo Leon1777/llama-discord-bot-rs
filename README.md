@@ -1,4 +1,4 @@
-## Rust + [Llama.cpp.rs](https://docs.rs/llama-cpp-2/latest/llama_cpp_2/) + [Serenity](https://docs.rs/serenity/latest/serenity/) (WIP)
+## Rust + [llama_cpp_2](https://docs.rs/llama-cpp-2/latest/llama_cpp_2/) + [Serenity](https://docs.rs/serenity/latest/serenity/) (WIP)
 
 ### Run the Bot
 
@@ -114,4 +114,4 @@ snapshot_download(
 
 ---
 
-This bot is lightweight, fast, and highly configurable, thanks to **Rust** **Llama.cpp.rs**, and **Serenity**.
+This bot is lightweight, fast, and highly configurable, thanks to **Rust** **llama_cpp_2**, and **Serenity**.
