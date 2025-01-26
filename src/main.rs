@@ -1,5 +1,4 @@
 mod bot;
-mod config;
 
 use bot::handler::Handler;
 use llama_cpp_2::{
@@ -8,11 +7,12 @@ use llama_cpp_2::{
 };
 use serenity::model::gateway::GatewayIntents;
 use serenity::Client;
+use std::env;
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
-    let token = config::get_discord_token();
+    let token = env::var("DISCORD_TOKEN").expect("Expected DISCORD_TOKEN in environment variables");
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
     // Initialize backend and model
