@@ -24,9 +24,7 @@ pub async fn generate_response(
     model: Arc<LlamaModel>,
     backend: Arc<LlamaBackend>,
 ) -> Result<String, String> {
-    let ctx_params = LlamaContextParams::default()
-        .with_n_ctx(Some(NonZeroU32::new(2048).unwrap()))
-        .with_n_threads(14); // threads for CPU decoding
+    let ctx_params = LlamaContextParams::default().with_n_ctx(Some(NonZeroU32::new(2048).unwrap()));
 
     let mut ctx = model
         .new_context(&backend, ctx_params)
