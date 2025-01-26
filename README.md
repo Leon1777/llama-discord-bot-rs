@@ -9,7 +9,7 @@
 
    ```bash
    git clone https://github.com/Leon1777/llama-discord-bot-rs.git
-   cd your-repo-name
+   cd llama-discord-bot-rs
    cargo build --release
    ```
 
@@ -23,6 +23,10 @@
 4. **Run the Bot**
    ```bash
    cargo run --release
+   ```
+   **or to enable CUDA**
+   ```bash
+   cargo run --release --features cuda
    ```
 
 ---
