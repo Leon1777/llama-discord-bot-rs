@@ -20,6 +20,12 @@
    DISCORD_TOKEN=your_token
    ```
 
+   Using PowerShell:
+
+   ```powershell
+   $env:DISCORD_TOKEN = "your_token"
+   ```
+
 4. **Run the Bot**
    ```bash
    cargo run --release
