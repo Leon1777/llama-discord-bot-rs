@@ -20,33 +20,24 @@ pub struct Message {
 pub async fn generate_response(
     user_input: &str,
     chat_history: Arc<Mutex<Vec<Message>>>,
-    n_len: i32,
     model: Arc<LlamaModel>,
     backend: Arc<LlamaBackend>,
 ) -> Result<String, String> {
-    let ctx_params = LlamaContextParams::default().with_n_ctx(Some(NonZeroU32::new(2048).unwrap()));
-
-    let mut ctx = model
-        .new_context(&backend, ctx_params)
-        .map_err(|e| format!("Failed to create context: {}", e))?;
-
     // local copy of chat history
     let local_history = {
-        let mut history = chat_history.lock().unwrap();
-
-        history.push(Message {
+        let history = chat_history.lock().unwrap();
+        let mut cloned_history = history.clone();
+        cloned_history.push(Message {
             role: "user".to_string(),
             content: user_input.to_string(),
         });
 
-        // separate scope
-        if history.len() > 5 {
-            let excess = history.len() - 5;
-            history.drain(0..excess); // drain old messages
+        if cloned_history.len() > 5 {
+            let excess = cloned_history.len() - 5;
+            cloned_history.drain(0..excess); // drain old messages
         }
 
-        // for local use
-        history.clone()
+        cloned_history
     };
 
     // construct prompt from local history
@@ -62,28 +53,48 @@ pub async fn generate_response(
         .str_to_token(&prompt, AddBos::Always)
         .map_err(|e| format!("Failed to tokenize prompt: {}", e))?;
 
-    // println!("Tokens for prompt: {:?}", tokens_list);
+    let tokens_in_history = tokens_list.len() as i32;
+    let n_ctx = 32768; // input + output tokens
 
-    let n_ctx = ctx.n_ctx() as i32;
-    let n_kv_req = tokens_list.len() as i32 + (n_len - tokens_list.len() as i32);
+    // n_len is the max tokens the model can generate
+    // n_batch >= tokens_in_history + n_len
+    let mut n_len = n_ctx - tokens_in_history;
 
-    if n_kv_req > n_ctx {
+    if n_len < 256 {
+        n_len = 256; // minimum response length
+    }
+
+    if tokens_in_history + n_len > n_ctx {
         return Err(format!(
-            "KV cache size is insufficient: n_kv_req={} > n_ctx={}. Reduce n_len or increase n_ctx.",
-            n_kv_req, n_ctx
+            "Token limit exceeded: tokens_in_history + n_len = {} > n_ctx = {}",
+            tokens_in_history + n_len,
+            n_ctx
         ));
     }
 
-    // sampler
-    let mut sampler = LlamaSampler::chain_simple([
-        LlamaSampler::temp(0.7),                    // Control randomness
-        LlamaSampler::top_k(50),                    // Top-k sampling for diversity
-        LlamaSampler::top_p(0.9, 1),                // Nucleus sampling for quality
-        LlamaSampler::penalties(64, 1.2, 0.0, 0.0), // Penalize repetition
-        LlamaSampler::greedy(),                     // Fallback to highest-probability token
-    ]);
+    // n_batch is the number of tokens processed at once
+    // It must be at least tokens_in_history + n_len to avoid a "batch size exceeded" error
+    let n_batch = std::cmp::max(tokens_in_history + n_len, 4096) as usize;
+    println!(
+        "Total tokens required: {}, Input tokens: {}, Calculated n_batch: {}",
+        tokens_in_history + n_len,
+        tokens_in_history,
+        n_batch
+    );
 
-    let mut batch = LlamaBatch::new(2048, 1);
+    // context parameters
+    // - n_ctx sets the total context size (input + output tokens)
+    // - n_batch ensures the batch can handle all input and generated tokens
+    let ctx_params = LlamaContextParams::default()
+        .with_n_ctx(NonZeroU32::new(n_ctx as u32))
+        .with_n_batch(n_batch as u32)
+        .with_n_threads(12); // cpu threads
+
+    let mut ctx = model
+        .new_context(&backend, ctx_params)
+        .map_err(|e| format!("Failed to create context: {}", e))?;
+
+    let mut batch = LlamaBatch::new(n_batch, 1);
     let last_index: i32 = (tokens_list.len() - 1) as i32;
 
     for (i, token) in (0_i32..).zip(tokens_list.into_iter()) {
@@ -102,6 +113,14 @@ pub async fn generate_response(
     let t_main_start = ggml_time_us();
 
     let mut generated_response = String::new();
+
+    let mut sampler = LlamaSampler::chain_simple([
+        LlamaSampler::temp(0.7),                    // Control randomness
+        LlamaSampler::top_k(50),                    // Top-k sampling for diversity
+        LlamaSampler::top_p(0.9, 1),                // Nucleus sampling for quality
+        LlamaSampler::penalties(64, 1.2, 0.0, 0.0), // Penalize repetition
+        LlamaSampler::greedy(),                     // Fallback to highest-probability token
+    ]);
 
     while n_cur < n_len {
         if n_cur <= 0 {
@@ -145,9 +164,14 @@ pub async fn generate_response(
         n_decode as f32 / duration.as_secs_f32()
     );
 
-    // Update global chat history with response
-    {
+    // user input and response to global chat history only if the generation was successful
+    if !generated_response.is_empty() {
         let mut history = chat_history.lock().unwrap();
+
+        history.push(Message {
+            role: "user".to_string(),
+            content: user_input.to_string(),
+        });
 
         history.push(Message {
             role: "assistant".to_string(),

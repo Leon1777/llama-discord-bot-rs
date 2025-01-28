@@ -1,5 +1,5 @@
 use super::llm::{generate_response, Message};
-use super::utils::split_message;
+use super::utils::{process_links, split_message};
 use llama_cpp_2::{llama_backend::LlamaBackend, model::LlamaModel};
 use serenity::async_trait;
 use serenity::model::{channel::Message as DiscordMessage, gateway::Ready};
@@ -49,10 +49,12 @@ impl EventHandler for Handler {
 
             let _lock = request_lock.lock().await;
 
-            let n_len = 2048; // max tokens
+            // handle links
+            let processed_command = process_links(command).await.unwrap();
+            println!("Processed Prompt: {}", processed_command);
 
             // Generate response
-            let response = generate_response(command, chat_history, n_len, model, backend)
+            let response = generate_response(&processed_command, chat_history, model, backend)
                 .await
                 .unwrap_or_else(|e| {
                     eprintln!("Error generating response: {}", e);

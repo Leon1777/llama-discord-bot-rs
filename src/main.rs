@@ -1,6 +1,7 @@
 mod bot;
 
 use bot::handler::Handler;
+use dotenv::dotenv;
 use llama_cpp_2::{
     llama_backend::LlamaBackend,
     model::{params::LlamaModelParams, LlamaModel},
@@ -12,6 +13,7 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     let token = env::var("DISCORD_TOKEN").expect("Expected DISCORD_TOKEN in environment variables");
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
