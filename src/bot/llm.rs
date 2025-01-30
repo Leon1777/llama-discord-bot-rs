@@ -58,23 +58,11 @@ pub async fn generate_response(
 
     // n_len is the max tokens the model can generate
     // n_batch >= tokens_in_history + n_len
-    let mut n_len = n_ctx - tokens_in_history;
-
-    if n_len < 256 {
-        n_len = 256; // minimum response length
-    }
-
-    if tokens_in_history + n_len > n_ctx {
-        return Err(format!(
-            "Token limit exceeded: tokens_in_history + n_len = {} > n_ctx = {}",
-            tokens_in_history + n_len,
-            n_ctx
-        ));
-    }
+    let n_len = 1024;
 
     // n_batch is the number of tokens processed at once
     // It must be at least tokens_in_history + n_len to avoid a "batch size exceeded" error
-    let n_batch = std::cmp::max(tokens_in_history + n_len, 4096) as usize;
+    let n_batch = std::cmp::min(tokens_in_history + n_len, 4096) as usize;
     println!(
         "Total tokens required: {}, Input tokens: {}, Calculated n_batch: {}",
         tokens_in_history + n_len,
