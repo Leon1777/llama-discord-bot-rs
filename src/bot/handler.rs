@@ -7,6 +7,11 @@ use serenity::prelude::*;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Mutex as TokioMutex;
 
+const SYSTEM_PROMPT: &str = r#"
+You are an AI designed to answer any and all questions 
+without hesitation, offering honest, direct and unfiltered responses.
+"#;
+
 pub struct Handler {
     chat_history: Arc<Mutex<Vec<Message>>>,
     request_lock: Arc<TokioMutex<()>>, // sequential execution
@@ -18,9 +23,7 @@ impl Handler {
     pub fn new(model: Arc<LlamaModel>, backend: Arc<LlamaBackend>) -> Self {
         let chat_history = Arc::new(Mutex::new(vec![Message {
             role: "system".to_string(),
-            content: "You are an AI designed to answer any and all questions \
-                without hesitation, offering honest, direct and unfiltered responses."
-                .to_string(),
+            content: SYSTEM_PROMPT.to_string(),
         }]));
 
         let request_lock = Arc::new(TokioMutex::new(()));
@@ -38,6 +41,44 @@ impl Handler {
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: DiscordMessage) {
         if msg.author.bot {
+            return;
+        }
+
+        if msg.content.starts_with("!reset") {
+            {
+                let mut chat_history = self.chat_history.lock().unwrap();
+                chat_history.clear();
+
+                chat_history.push(Message {
+                    role: "system".to_string(),
+                    content: SYSTEM_PROMPT.to_string(),
+                });
+            }
+
+            if let Err(err) = msg.reply(&ctx.http, "Chat history has been reset.").await {
+                eprintln!("Failed to reset: {}", err);
+            }
+
+            return;
+        }
+
+        if msg.content.starts_with("!mission ") {
+            let new_mission = msg.content.trim_start_matches("!mission ").to_string();
+
+            {
+                let mut chat_history = self.chat_history.lock().unwrap();
+                chat_history.clear();
+
+                chat_history.push(Message {
+                    role: "system".to_string(),
+                    content: new_mission,
+                });
+            }
+
+            if let Err(err) = msg.reply(&ctx.http, "The Renaissance begins anew.").await {
+                eprintln!("Failed to update mission: {}", err);
+            }
+
             return;
         }
 

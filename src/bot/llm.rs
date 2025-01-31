@@ -23,21 +23,24 @@ pub async fn generate_response(
     model: Arc<LlamaModel>,
     backend: Arc<LlamaBackend>,
 ) -> Result<String, String> {
-    // local copy of chat history
-    let local_history = {
-        let history = chat_history.lock().unwrap();
-        let mut cloned_history = history.clone();
-        cloned_history.push(Message {
+    // update global chat history with user input
+    {
+        let mut history = chat_history.lock().unwrap();
+        history.push(Message {
             role: "user".to_string(),
             content: user_input.to_string(),
         });
 
-        if cloned_history.len() > 5 {
-            let excess = cloned_history.len() - 5;
-            cloned_history.drain(0..excess); // drain old messages
+        if history.len() > 5 {
+            let excess = history.len() - 5;
+            history.drain(0..excess); // drain old messages
         }
+    }
 
-        cloned_history
+    // local copy of the chat history
+    let local_history = {
+        let history = chat_history.lock().unwrap();
+        history.clone()
     };
 
     // construct prompt from local history
@@ -52,6 +55,8 @@ pub async fn generate_response(
     let tokens_list = model
         .str_to_token(&prompt, AddBos::Always)
         .map_err(|e| format!("Failed to tokenize prompt: {}", e))?;
+
+    // println!("Tokenized output: {:?}", tokens_list);
 
     let tokens_in_history = tokens_list.len() as i32;
     let n_ctx = 32768; // input + output tokens
@@ -155,12 +160,6 @@ pub async fn generate_response(
     // user input and response to global chat history only if the generation was successful
     if !generated_response.is_empty() {
         let mut history = chat_history.lock().unwrap();
-
-        history.push(Message {
-            role: "user".to_string(),
-            content: user_input.to_string(),
-        });
-
         history.push(Message {
             role: "assistant".to_string(),
             content: generated_response.clone(),
