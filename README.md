@@ -41,7 +41,7 @@
 
 - **`!ask <question>`**: Ask the bot anything.
 - **`!reset`**: Reset the chat history to the default system prompt.
-- **`!mission <new_system_prompt>`**: Reset the chat history to the default system prompt and set a new system prompt.
+- **`!mission <new_system_prompt>`**: Reset the chat history and set a new system prompt.
 
 ---
 
