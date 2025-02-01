@@ -6,10 +6,8 @@ use llama_cpp_2::{
     llama_backend::LlamaBackend,
     model::{params::LlamaModelParams, LlamaModel},
 };
-use serenity::model::gateway::GatewayIntents;
-use serenity::Client;
-use std::env;
-use std::sync::Arc;
+use serenity::{model::gateway::GatewayIntents, Client};
+use std::{env, sync::Arc};
 
 #[tokio::main]
 async fn main() {

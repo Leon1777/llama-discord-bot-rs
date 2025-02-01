@@ -3,13 +3,14 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::LlamaModel,
-    model::{AddBos, Special},
+    model::{AddBos, LlamaModel, Special},
     sampling::LlamaSampler,
 };
-use std::num::NonZeroU32;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::{
+    num::NonZeroU32,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 #[derive(Debug, Clone)]
 pub struct Message {

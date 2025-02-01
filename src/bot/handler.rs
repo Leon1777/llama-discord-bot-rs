@@ -1,9 +1,13 @@
-use super::llm::{generate_response, Message};
-use super::utils::{process_links, split_message};
+use super::{
+    llm::{generate_response, Message},
+    utils::{process_links, split_message},
+};
 use llama_cpp_2::{llama_backend::LlamaBackend, model::LlamaModel};
-use serenity::async_trait;
-use serenity::model::{channel::Message as DiscordMessage, gateway::Ready};
-use serenity::prelude::*;
+use serenity::{
+    async_trait,
+    model::{channel::Message as DiscordMessage, gateway::Ready},
+    prelude::*,
+};
 use std::sync::{Arc, Mutex};
 use tokio::sync::Mutex as TokioMutex;
 
