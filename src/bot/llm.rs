@@ -63,11 +63,16 @@ pub async fn generate_response(
     let n_ctx = 32768; // input + output tokens
 
     // n_len is the max tokens the model can generate
-    // n_batch >= tokens_in_history + n_len
+    // [n_batch >= tokens_in_history + n_len]
+    //
+    // TODO: Improve dynamic adjustment based on
+    // input/tokens_in_history or pass via !ask
     let n_len = 1024;
 
     // n_batch is the number of tokens processed at once
     // It must be at least tokens_in_history + n_len to avoid a "batch size exceeded" error
+    //
+    // TODO: verify if this method is optimal for calculating n_batch
     let n_batch = std::cmp::min(tokens_in_history + n_len, 4096) as usize;
     println!(
         "Total tokens required: {}, Input tokens: {}, Calculated n_batch: {}",
@@ -82,7 +87,13 @@ pub async fn generate_response(
     let ctx_params = LlamaContextParams::default()
         .with_n_ctx(NonZeroU32::new(n_ctx as u32))
         .with_n_batch(n_batch as u32)
-        .with_n_threads(12); // cpu threads
+        .with_n_threads(6);
+    // If your token generation is extremely slow, try setting this number
+    // to 1. If this significantly improves your token generation speed,
+    // then your CPU is being oversaturated and you need to explicitly set
+    // this parameter to the number of the physical CPU cores on your machine
+    // (even if you utilize a GPU). If in doubt, start with 1 and double
+    // the amount until you hit a performance bottleneck, then scale the number down.
 
     let mut ctx = model
         .new_context(&backend, ctx_params)
