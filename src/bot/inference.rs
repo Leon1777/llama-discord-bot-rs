@@ -32,9 +32,18 @@ pub async fn generate_response(
             content: user_input.to_string(),
         });
 
+        // trim and retain system_prompt
         if history.len() > 5 {
-            let excess = history.len() - 5;
-            history.drain(0..excess); // drain old messages
+            let mut excess = history.len() - 5;
+            let mut i = 0;
+            while i < excess {
+                if history[i].role != "system" {
+                    history.remove(i);
+                    excess -= 1;
+                } else {
+                    i += 1;
+                }
+            }
         }
     }
 

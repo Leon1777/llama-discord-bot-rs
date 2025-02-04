@@ -21,14 +21,9 @@ pub async fn ask(
         .unwrap_or_else(|_| question.clone());
     println!("Processed Prompt: {}", processed_question);
 
-    let chat_history = {
-        let history = state.chat_history.lock().unwrap();
-        history.clone()
-    };
-
     let response = generate_response(
         &processed_question,
-        Arc::new(std::sync::Mutex::new(chat_history)),
+        Arc::clone(&state.chat_history),
         Arc::clone(&state.model),
         Arc::clone(&state.backend),
     )
