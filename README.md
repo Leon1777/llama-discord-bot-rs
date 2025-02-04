@@ -39,9 +39,9 @@
 
 ### Commands
 
-- **`!ask <question>`**: Ask the bot anything.
-- **`!reset`**: Reset the chat history to the default system prompt.
-- **`!mission <new_system_prompt>`**: Reset the chat history and set a new system prompt.
+- **`/ask <question>`**: Ask the bot anything.
+- **`/reset`**: Reset the chat history to the default system prompt.
+- **`/mission <new_system_prompt>`**: Reset the chat history and set a new system prompt.
 
 ---
 
@@ -122,4 +122,4 @@ snapshot_download(
 
 ---
 
-This bot is lightweight, fast, and highly configurable, thanks to **Rust** **llama_cpp_2**, and **Serenity**.
+This bot is lightweight, fast, and highly configurable, thanks to **Rust**, **llama_cpp_2**, and **Serenity**.
