@@ -189,7 +189,7 @@ pub async fn generate_response(
             content: generated_response.clone(),
         });
 
-        // println!("Chat History: {:?}", history);
+        println!("Chat History: {:?}", history);
     }
 
     Ok(generated_response)
