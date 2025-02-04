@@ -120,12 +120,24 @@ pub async fn generate_response(
     let mut generated_response = String::new();
 
     let mut sampler = LlamaSampler::chain_simple([
-        LlamaSampler::temp(0.7),                    // Control randomness
-        LlamaSampler::top_k(50),                    // Top-k sampling for diversity
-        LlamaSampler::top_p(0.9, 1),                // Nucleus sampling for quality
-        LlamaSampler::penalties(64, 1.2, 0.0, 0.0), // Penalize repetition
-        LlamaSampler::greedy(),                     // Fallback to highest-probability token
+        // LlamaSampler::temp(0.7),                    // Control randomness
+        // LlamaSampler::top_k(50),                    // Top-k sampling for diversity
+        // LlamaSampler::top_p(0.9, 1),                // Nucleus sampling for quality
+        // LlamaSampler::penalties(64, 1.2, 0.0, 0.0), // Penalize repetition
+        // LlamaSampler::greedy(),                     // Fallback to highest-probability token
+        LlamaSampler::mirostat_v2(42, 5.0, 0.1), // Mirostat v2 for adaptive generation
     ]);
+
+    // Mirostat 2.0 algorithm described in the paper <https://arxiv.org/abs/2007.14966>. Uses tokens instead of words.
+    //
+    // # Parameters:
+    // - ``seed``: Seed to initialize random generation with.
+    // - ``tau``: The target cross-entropy (or surprise) value you want to achieve for the
+    //     generated text. A higher value corresponds to more surprising or less predictable text,
+    //     while a lower value corresponds to less surprising or more predictable text.
+    // - ``eta``: The learning rate used to update `mu` based on the error between the target and
+    //     observed surprisal of the sampled word. A larger learning rate will cause `mu` to be
+    //     updated more quickly, while a smaller learning rate will result in slower updates.
 
     while n_cur < n_len {
         if n_cur <= 0 {
