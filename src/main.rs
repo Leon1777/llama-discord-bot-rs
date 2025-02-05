@@ -49,22 +49,46 @@ impl From<serenity::Error> for BotError {
 // GPU stats using nvidia-smi
 async fn get_gpu_stats() -> String {
     let output = Command::new("nvidia-smi")
-        .arg("--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu")
+        .arg("--query-gpu=name,temperature.gpu,memory.used,memory.total,power.draw")
         .arg("--format=csv,noheader,nounits")
         .output();
 
     match output {
         Ok(output) => {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            let parts: Vec<&str> = output_str.trim().split(", ").collect();
+            let mut gpu_model = String::new();
+            let mut temps = Vec::new();
+            let mut vram_used = 0;
+            let mut vram_total = 0;
+            let mut total_power = 0.0;
+            let mut gpu_count = 0;
 
-            if parts.len() == 5 {
-                return format!(
-                    "GPU: {} | {}% | {} MB / {} MB | {}°C",
-                    parts[0], parts[1], parts[2], parts[3], parts[4]
-                );
+            for line in String::from_utf8_lossy(&output.stdout).lines() {
+                let parts: Vec<&str> = line.split(',').map(str::trim).collect();
+                if parts.len() == 5 {
+                    if gpu_model.is_empty() {
+                        gpu_model = parts[0].replace("NVIDIA GeForce ", "");
+                    }
+                    temps.push(parts[1].to_string());
+                    vram_used += parts[2].parse::<i32>().unwrap_or(0);
+                    vram_total += parts[3].parse::<i32>().unwrap_or(0);
+                    total_power += parts[4].parse::<f32>().unwrap_or(0.0);
+                    gpu_count += 1;
+                }
             }
-            "Failed to parse GPU stats".to_string()
+
+            if gpu_count == 0 {
+                return "Failed to parse GPU stats".to_string();
+            }
+
+            format!(
+                "{}x {} | Temp: {}°C | VRAM: {} MB / {} MB | Power: {:.2} W",
+                gpu_count,
+                gpu_model,
+                temps.join(", "),
+                vram_used,
+                vram_total,
+                total_power
+            )
         }
         Err(_) => "Failed to retrieve GPU info".to_string(),
     }
@@ -114,9 +138,7 @@ async fn main() {
 
                 // GPU monitoring in background
                 let ctx_clone = ctx.clone();
-                task::spawn(async move {
-                    monitor_gpu_stats(ctx_clone).await;
-                });
+                task::spawn(monitor_gpu_stats(ctx_clone));
 
                 Ok(bot_state)
             })
