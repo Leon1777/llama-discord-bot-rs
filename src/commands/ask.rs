@@ -2,6 +2,7 @@ use crate::bot::inference::generate_response;
 use crate::bot::utils::{process_links, split_message};
 use crate::BotContext;
 use crate::BotError;
+use poise::CreateReply;
 use std::sync::Arc;
 
 #[poise::command(slash_command, track_edits)]
@@ -40,12 +41,15 @@ pub async fn ask(
         response
     );
 
-    let mut messages = split_message(&full_response, 2000);
-    if let Some(first_message) = messages.pop() {
-        ctx.say(first_message).await?;
+    let messages: Vec<String> = split_message(&full_response, 2000);
+    let mut messages_iter = messages.into_iter();
+
+    if let Some(first_message) = messages_iter.next() {
+        ctx.send(CreateReply::default().content(first_message))
+            .await?;
     }
 
-    for message in messages {
+    for message in messages_iter {
         ctx.channel_id()
             .say(&ctx.serenity_context().http, message)
             .await?;
