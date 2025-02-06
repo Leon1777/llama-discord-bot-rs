@@ -3,7 +3,7 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::{AddBos, LlamaModel, Special},
+    model::{AddBos, LlamaChatMessage, LlamaModel, Special},
     sampling::LlamaSampler,
 };
 use std::{
@@ -32,34 +32,35 @@ pub async fn generate_response(
             content: user_input.to_string(),
         });
 
-        // trim and retain system_prompt
+        // trim
         if history.len() > 5 {
-            let mut excess = history.len() - 5;
-            let mut i = 0;
-            while i < excess {
-                if history[i].role != "system" {
-                    history.remove(i);
-                    excess -= 1;
-                } else {
-                    i += 1;
-                }
-            }
+            let excess = history.len() - 5;
+            history.drain(0..excess);
         }
     }
 
-    // local copy of the chat history
-    let local_history = {
-        let history = chat_history.lock().unwrap();
-        history.clone()
-    };
+    // chat messages list
+    let mut chat_messages: Vec<LlamaChatMessage> = Vec::new();
 
-    // construct prompt from local history
-    let prompt = local_history
-        .iter()
-        .map(|msg| format!("{}: {}", msg.role, msg.content))
-        .collect::<Vec<_>>()
-        .join("\n")
-        + "\nAssistant:";
+    {
+        let history = chat_history.lock().unwrap();
+
+        // user-assistant history into LlamaChatMessages
+        let history_messages: Result<Vec<LlamaChatMessage>, _> = history
+            .iter()
+            .map(|msg| LlamaChatMessage::new(msg.role.clone(), msg.content.clone()))
+            .collect();
+
+        let history_messages =
+            history_messages.map_err(|e| format!("Failed to convert chat messages: {}", e))?;
+
+        chat_messages.extend(history_messages);
+    }
+
+    // chat template for proper formatting
+    let prompt = model
+        .apply_chat_template(None, chat_messages, true)
+        .map_err(|e| format!("Failed to apply chat template: {}", e))?;
 
     // tokenize prompt
     let tokens_list = model
@@ -69,14 +70,14 @@ pub async fn generate_response(
     // println!("Tokenized output: {:?}", tokens_list);
 
     let tokens_in_history = tokens_list.len() as i32;
-    let n_ctx = 32768; // input + output tokens
+    let n_ctx = 16384; // input + output tokens
 
     // n_len is the max tokens the model can generate
     // [n_batch >= tokens_in_history + n_len]
     //
     // TODO: Improve dynamic adjustment based on
     // input/tokens_in_history or pass via !ask
-    let n_len = 1024;
+    let n_len = 768;
 
     // n_batch is the number of tokens processed at once
     // It must be at least tokens_in_history + n_len to avoid a "batch size exceeded" error

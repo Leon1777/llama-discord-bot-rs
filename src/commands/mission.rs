@@ -1,4 +1,3 @@
-use crate::bot::inference::Message as LlmMessage;
 use crate::BotContext;
 use crate::BotError;
 use std::sync::Arc;
@@ -11,12 +10,13 @@ pub async fn mission(
     let state = ctx.data();
 
     {
+        let mut system_prompt = state.system_prompt.lock().unwrap();
+        *system_prompt = new_mission.clone();
+    }
+
+    {
         let mut history = state.chat_history.lock().unwrap();
         history.clear();
-        history.push(LlmMessage {
-            role: "system".to_string(),
-            content: new_mission.clone(),
-        });
     }
 
     ctx.say(format!(
