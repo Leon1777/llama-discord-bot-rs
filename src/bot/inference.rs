@@ -3,7 +3,7 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::{AddBos, LlamaModel, Special},
+    model::{AddBos, LlamaChatMessage, LlamaModel, Special},
     sampling::LlamaSampler,
 };
 use std::{
@@ -20,10 +20,16 @@ pub struct Message {
 
 pub async fn generate_response(
     user_input: &str,
+    system_prompt: Arc<Mutex<String>>,
     chat_history: Arc<Mutex<Vec<Message>>>,
     model: Arc<LlamaModel>,
     backend: Arc<LlamaBackend>,
 ) -> Result<String, String> {
+    let system_prompt = {
+        let prompt_lock = system_prompt.lock().unwrap();
+        prompt_lock.clone()
+    };
+
     // update global chat history with user input
     {
         let mut history = chat_history.lock().unwrap();
@@ -32,34 +38,39 @@ pub async fn generate_response(
             content: user_input.to_string(),
         });
 
-        // trim and retain system_prompt
+        // trim
         if history.len() > 5 {
-            let mut excess = history.len() - 5;
-            let mut i = 0;
-            while i < excess {
-                if history[i].role != "system" {
-                    history.remove(i);
-                    excess -= 1;
-                } else {
-                    i += 1;
-                }
-            }
+            let excess = history.len() - 5;
+            history.drain(0..excess);
         }
     }
 
-    // local copy of the chat history
-    let local_history = {
-        let history = chat_history.lock().unwrap();
-        history.clone()
-    };
+    // convert chat history to LlamaChatMessage format
+    let mut chat_messages: Vec<LlamaChatMessage> =
+        vec![LlamaChatMessage::new("system".to_string(), system_prompt)
+            .map_err(|e| format!("Failed to create system message: {}", e))?];
 
-    // construct prompt from local history
-    let prompt = local_history
-        .iter()
-        .map(|msg| format!("{}: {}", msg.role, msg.content))
-        .collect::<Vec<_>>()
-        .join("\n")
-        + "\nAssistant:";
+    {
+        let history = chat_history.lock().unwrap();
+        let history_messages: Vec<LlamaChatMessage> = history
+            .iter()
+            .map(|msg| {
+                LlamaChatMessage::new(msg.role.clone(), msg.content.clone())
+                    .map_err(|e| format!("Failed to convert chat message: {}", e))
+            })
+            .collect::<Result<_, _>>()?;
+
+        chat_messages.extend(history_messages);
+    }
+
+    // get default chat template from model
+    // https://docs.rs/llama-cpp-2/latest/src/llama_cpp_2/model.rs.html#417
+    let chat_template = model.get_chat_template(1024).ok();
+
+    // Apply chat template to messages
+    let prompt = model
+        .apply_chat_template(chat_template, chat_messages, true)
+        .map_err(|e| format!("Failed to apply chat template: {}", e))?;
 
     // tokenize prompt
     let tokens_list = model
@@ -69,14 +80,14 @@ pub async fn generate_response(
     // println!("Tokenized output: {:?}", tokens_list);
 
     let tokens_in_history = tokens_list.len() as i32;
-    let n_ctx = 32768; // input + output tokens
+    let n_ctx = 16384; // input + output tokens
 
     // n_len is the max tokens the model can generate
     // [n_batch >= tokens_in_history + n_len]
     //
     // TODO: Improve dynamic adjustment based on
     // input/tokens_in_history or pass via !ask
-    let n_len = 1024;
+    let n_len = 768;
 
     // n_batch is the number of tokens processed at once
     // It must be at least tokens_in_history + n_len to avoid a "batch size exceeded" error

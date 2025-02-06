@@ -24,6 +24,7 @@ use tokio::{sync::Mutex as TokioMutex, task, time::sleep};
 #[derive(Debug)]
 pub struct BotContext {
     pub chat_history: Arc<Mutex<Vec<LlmMessage>>>,
+    pub system_prompt: Arc<Mutex<String>>,
     pub request_lock: Arc<TokioMutex<()>>,
     pub model: Arc<LlamaModel>,
     pub backend: Arc<LlamaBackend>,
@@ -122,10 +123,8 @@ async fn main() {
     );
 
     let bot_state = Arc::new(BotContext {
-        chat_history: Arc::new(Mutex::new(vec![LlmMessage {
-            role: "system".to_string(),
-            content: SYSTEM_PROMPT.to_string(),
-        }])),
+        chat_history: Arc::new(Mutex::new(Vec::new())),
+        system_prompt: Arc::new(Mutex::new(SYSTEM_PROMPT.to_string())),
         request_lock: Arc::new(TokioMutex::new(())),
         model,
         backend,
