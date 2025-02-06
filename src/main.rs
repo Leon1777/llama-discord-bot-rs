@@ -123,10 +123,7 @@ async fn main() {
     );
 
     let bot_state = Arc::new(BotContext {
-        chat_history: Arc::new(Mutex::new(vec![LlmMessage {
-            role: "system".to_string(),
-            content: SYSTEM_PROMPT.to_string(),
-        }])),
+        chat_history: Arc::new(Mutex::new(Vec::new())),
         system_prompt: Arc::new(Mutex::new(SYSTEM_PROMPT.to_string())),
         request_lock: Arc::new(TokioMutex::new(())),
         model,

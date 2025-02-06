@@ -20,10 +20,16 @@ pub struct Message {
 
 pub async fn generate_response(
     user_input: &str,
+    system_prompt: Arc<Mutex<String>>,
     chat_history: Arc<Mutex<Vec<Message>>>,
     model: Arc<LlamaModel>,
     backend: Arc<LlamaBackend>,
 ) -> Result<String, String> {
+    let system_prompt = {
+        let prompt_lock = system_prompt.lock().unwrap();
+        prompt_lock.clone()
+    };
+
     // update global chat history with user input
     {
         let mut history = chat_history.lock().unwrap();
@@ -39,27 +45,31 @@ pub async fn generate_response(
         }
     }
 
-    // chat messages list
-    let mut chat_messages: Vec<LlamaChatMessage> = Vec::new();
+    // convert chat history to LlamaChatMessage format
+    let mut chat_messages: Vec<LlamaChatMessage> =
+        vec![LlamaChatMessage::new("system".to_string(), system_prompt)
+            .map_err(|e| format!("Failed to create system message: {}", e))?];
 
     {
         let history = chat_history.lock().unwrap();
-
-        // user-assistant history into LlamaChatMessages
-        let history_messages: Result<Vec<LlamaChatMessage>, _> = history
+        let history_messages: Vec<LlamaChatMessage> = history
             .iter()
-            .map(|msg| LlamaChatMessage::new(msg.role.clone(), msg.content.clone()))
-            .collect();
-
-        let history_messages =
-            history_messages.map_err(|e| format!("Failed to convert chat messages: {}", e))?;
+            .map(|msg| {
+                LlamaChatMessage::new(msg.role.clone(), msg.content.clone())
+                    .map_err(|e| format!("Failed to convert chat message: {}", e))
+            })
+            .collect::<Result<_, _>>()?;
 
         chat_messages.extend(history_messages);
     }
 
-    // chat template for proper formatting
+    // get default chat template from model
+    // https://docs.rs/llama-cpp-2/latest/src/llama_cpp_2/model.rs.html#417
+    let chat_template = model.get_chat_template(1024).ok();
+
+    // Apply chat template to messages
     let prompt = model
-        .apply_chat_template(None, chat_messages, true)
+        .apply_chat_template(chat_template, chat_messages, true)
         .map_err(|e| format!("Failed to apply chat template: {}", e))?;
 
     // tokenize prompt

@@ -24,6 +24,7 @@ pub async fn ask(
 
     let response = generate_response(
         &processed_question,
+        Arc::clone(&state.system_prompt),
         Arc::clone(&state.chat_history),
         Arc::clone(&state.model),
         Arc::clone(&state.backend),
@@ -35,7 +36,7 @@ pub async fn ask(
     });
 
     let full_response = format!(
-        "**{} asked:** {}\n\n**AI Response:** {}",
+        "**{} asked:** {}\n\n**Ai:** \n{}",
         ctx.author().name,
         question,
         response
