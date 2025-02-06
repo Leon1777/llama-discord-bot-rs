@@ -12,6 +12,8 @@ pub async fn mission(
     {
         let mut system_prompt = state.system_prompt.lock().unwrap();
         *system_prompt = new_mission.clone();
+
+        println!("Updated system prompt: {}", *system_prompt);
     }
 
     {
