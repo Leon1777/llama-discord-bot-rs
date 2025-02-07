@@ -7,7 +7,7 @@ edition = "2021"
 serenity = "0.12.4"
 poise = "0.6.1"
 tokio = { version = "1", features = ["full"] }
-llama-cpp-2 = { version = "0.1.92" }
+llama-cpp-2 = "^0.1.92"
 regex = "1.11.1"
 reqwest = { version = "0.12.12", features = ["json"] }
 scraper = "0.22.0"
