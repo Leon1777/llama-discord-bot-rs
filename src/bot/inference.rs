@@ -65,12 +65,15 @@ pub async fn generate_response(
 
     // get default chat template from model
     // https://docs.rs/llama-cpp-2/latest/src/llama_cpp_2/model.rs.html#417
-    let chat_template = model.get_chat_template(1024).ok();
+    let chat_template = model.get_chat_template().ok();
 
     // Apply chat template to messages
-    let prompt = model
-        .apply_chat_template(chat_template, chat_messages, true)
-        .map_err(|e| format!("Failed to apply chat template: {}", e))?;
+    let prompt = match &chat_template {
+        Some(template) => model
+            .apply_chat_template(template, &chat_messages, true)
+            .map_err(|e| format!("Failed to apply chat template: {}", e))?,
+        None => return Err("Chat template is not set".into()),
+    };
 
     // tokenize prompt
     let tokens_list = model
