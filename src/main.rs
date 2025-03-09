@@ -131,9 +131,10 @@ async fn main() {
     });
 
     let framework = Framework::builder()
-        .setup(|ctx, ready, _framework| {
+        .setup(|ctx, ready, framework| {
             Box::pin(async move {
                 println!("Logged in as {}", ready.user.name);
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
                 // GPU monitoring in background
                 let ctx_clone = ctx.clone();
